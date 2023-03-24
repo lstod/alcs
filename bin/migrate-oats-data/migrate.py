@@ -40,6 +40,7 @@ if __name__ == "__main__":
                 with console.status("[bold green]Cleaning previous ETL...") as status:
                     console.log("Cleaning applications:")
                     clean_applications()
+                    clean_import()
                     console.log("Done")
     finally:
         if connection_pool:

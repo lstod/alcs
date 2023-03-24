@@ -20,6 +20,19 @@ def process_applications(conn=None):
     """
 
     cursor = conn.cursor()
+
+    bootstrap_sql = """
+        DO $$ 
+        BEGIN
+            BEGIN
+                ALTER TABLE alcs.application a ADD COLUMN oats_import jsonb;
+            EXCEPTION
+                WHEN duplicate_column THEN RAISE NOTICE 'column oats_import already exists in alcs.application.';
+            END;
+        END;
+        $$
+    """
+
     count_sql = "SELECT COUNT(*) FROM oats.oats_alr_applications"
     cursor.execute(count_sql)
     count_total = cursor.fetchone()[0]
@@ -43,5 +56,8 @@ def clean_applications(conn=None):
     cursor.execute(
         "DELETE FROM alcs.application a WHERE a.audit_created_by = 'oats_etl'"
     )
+    cursor.execute("ALTER TABLE alcs.application a DROP COLUMN oats_import")
+
     cursor.execute("DELETE FROM alcs.card c WHERE c.audit_created_by = 'oats_etl'")
+
     cursor.close()
