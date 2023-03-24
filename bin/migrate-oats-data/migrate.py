@@ -31,6 +31,9 @@ if __name__ == "__main__":
                 console.log("Beginning OATS -> ALCS import process")
                 with console.status("[bold green]Import OATS into ALCS...") as status:
                     console.log("Processing applications:")
+                    # TODO: Place other entities here, optionally mapped to CLI arguments
+                    # Place code tables first
+
                     process_applications()
                     console.log("Done")
             case "clean":
