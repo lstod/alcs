@@ -32,6 +32,7 @@ def process_applications(conn=None):
         END;
         $$
     """
+    cursor.execute(bootstrap_sql)
 
     count_sql = "SELECT COUNT(*) FROM oats.oats_alr_applications"
     cursor.execute(count_sql)
