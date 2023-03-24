@@ -23,7 +23,7 @@ export class DocumentService {
   private dataStore: S3Client;
   private logger = new Logger(DocumentService.name);
   private bucket = this.config.get<string>('STORAGE.BUCKET');
-  private documentTimeout = this.config.get<number>('ALCS.DOCUMENT_TIMEOUT');
+  private documentTimeout = this.config.get<number>('DOCUMENT_TIMEOUT');
 
   constructor(
     @Inject(CONFIG_TOKEN) private config: IConfig,
@@ -55,6 +55,7 @@ export class DocumentService {
     await this.dataStore.send(command);
     const document = await this.createDocumentRecord({
       fileKey: fileKey,
+      fileSize: file.file.bytesRead,
       mimeType: file.mimetype,
       uploadedBy: user,
       fileName: file.filename,
@@ -131,6 +132,7 @@ export class DocumentService {
         mimeType: data.mimeType,
         fileKey: data.fileKey,
         fileName: data.fileName,
+        fileSize: data.fileSize,
         source: data.source,
         uploadedBy: data.uploadedBy,
         tags: DEFAULT_DB_TAGS,

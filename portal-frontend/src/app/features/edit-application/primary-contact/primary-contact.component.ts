@@ -6,8 +6,8 @@ import { ApplicationDocumentDto, DOCUMENT } from '../../../services/application-
 import { ApplicationDocumentService } from '../../../services/application-document/application-document.service';
 import { APPLICATION_OWNER, ApplicationOwnerDto } from '../../../services/application-owner/application-owner.dto';
 import { ApplicationOwnerService } from '../../../services/application-owner/application-owner.service';
-import { ApplicationDetailedDto } from '../../../services/application/application.dto';
-import { ApplicationService } from '../../../services/application/application.service';
+import { ApplicationSubmissionDetailedDto } from '../../../services/application-submission/application-submission.dto';
+import { ApplicationSubmissionService } from '../../../services/application-submission/application-submission.service';
 import { FileHandle } from '../../../shared/file-drag-drop/drag-drop.directive';
 import { EditApplicationSteps } from '../edit-application.component';
 
@@ -17,7 +17,8 @@ import { EditApplicationSteps } from '../edit-application.component';
   styleUrls: ['./primary-contact.component.scss'],
 })
 export class PrimaryContactComponent implements OnInit, OnDestroy {
-  @Input() $application!: BehaviorSubject<ApplicationDetailedDto | undefined>;
+  @Input() $application!: BehaviorSubject<ApplicationSubmissionDetailedDto | undefined>;
+  @Input() $applicationDocuments!: BehaviorSubject<ApplicationDocumentDto[]>;
   @Input() showErrors = false;
   @Output() navigateToStep = new EventEmitter<number>();
   currentStep = EditApplicationSteps.PrimaryContact;
@@ -48,7 +49,7 @@ export class PrimaryContactComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
-    private applicationService: ApplicationService,
+    private applicationService: ApplicationSubmissionService,
     private applicationDocumentService: ApplicationDocumentService,
     private applicationOwnerService: ApplicationOwnerService
   ) {}
@@ -57,9 +58,12 @@ export class PrimaryContactComponent implements OnInit, OnDestroy {
     this.$application.pipe(takeUntil(this.$destroy)).subscribe((application) => {
       if (application) {
         this.fileId = application.fileNumber;
-        this.files = application.documents.filter((document) => document.type === DOCUMENT.AUTHORIZATION_LETTER);
         this.loadOwners(application.fileNumber, application.primaryContactOwnerUuid);
       }
+    });
+
+    this.$applicationDocuments.pipe(takeUntil(this.$destroy)).subscribe((documents) => {
+      this.files = documents.filter((document) => document.type === DOCUMENT.AUTHORIZATION_LETTER);
     });
   }
 
@@ -67,8 +71,10 @@ export class PrimaryContactComponent implements OnInit, OnDestroy {
     if (this.fileId) {
       await this.onSave();
       await this.applicationDocumentService.attachExternalFile(this.fileId, file.file, DOCUMENT.AUTHORIZATION_LETTER);
-      const updatedApp = await this.applicationService.getByFileId(this.fileId);
-      this.$application.next(updatedApp);
+      const documents = await this.applicationDocumentService.getByFileId(this.fileId);
+      if (documents) {
+        this.$applicationDocuments.next(documents);
+      }
     }
   }
 
@@ -76,8 +82,10 @@ export class PrimaryContactComponent implements OnInit, OnDestroy {
     if (this.fileId) {
       await this.onSave();
       await this.applicationDocumentService.deleteExternalFile(document.uuid);
-      const updatedApp = await this.applicationService.getByFileId(this.fileId);
-      this.$application.next(updatedApp);
+      const documents = await this.applicationDocumentService.getByFileId(this.fileId);
+      if (documents) {
+        this.$applicationDocuments.next(documents);
+      }
     }
   }
 

@@ -4,9 +4,9 @@ import { Router } from '@angular/router';
 import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
 import { ApplicationDocumentDto, DOCUMENT } from '../../../services/application-document/application-document.dto';
 import { ApplicationDocumentService } from '../../../services/application-document/application-document.service';
-import { ApplicationReviewDto } from '../../../services/application-review/application-review.dto';
-import { ApplicationReviewService } from '../../../services/application-review/application-review.service';
-import { ApplicationDto } from '../../../services/application/application.dto';
+import { ApplicationSubmissionReviewDto } from '../../../services/application-submission-review/application-submission-review.dto';
+import { ApplicationSubmissionReviewService } from '../../../services/application-submission-review/application-submission-review.service';
+import { ApplicationSubmissionDto } from '../../../services/application-submission/application-submission.dto';
 import { CustomStepperComponent } from '../../../shared/custom-stepper/custom-stepper.component';
 import { MOBILE_BREAKPOINT } from '../../../shared/utils/breakpoints';
 import { ReviewApplicationSteps } from '../review-application.component';
@@ -17,7 +17,8 @@ import { ReviewApplicationSteps } from '../review-application.component';
   styleUrls: ['./review-submit.component.scss'],
 })
 export class ReviewSubmitComponent implements OnInit, OnDestroy {
-  @Input() $application!: BehaviorSubject<ApplicationDto | undefined>;
+  @Input() $application!: BehaviorSubject<ApplicationSubmissionDto | undefined>;
+  @Input() $applicationDocuments!: BehaviorSubject<ApplicationDocumentDto[]>;
   @Input() stepper!: CustomStepperComponent;
   @Output() navigateToStep = new EventEmitter<number>();
   currentStep = ReviewApplicationSteps.ReviewAndSubmit;
@@ -29,7 +30,7 @@ export class ReviewSubmitComponent implements OnInit, OnDestroy {
   @ViewChild('attachmentInfo') attachmentInfoPanel?: MatExpansionPanel;
 
   $destroy = new Subject<void>();
-  _applicationReview: ApplicationReviewDto | undefined;
+  _applicationReview: ApplicationSubmissionReviewDto | undefined;
   showErrors = true;
   isMobile = false;
   hasCompletedStepsBeforeDocuments = false;
@@ -41,7 +42,7 @@ export class ReviewSubmitComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
-    private applicationReviewService: ApplicationReviewService,
+    private applicationReviewService: ApplicationSubmissionReviewService,
     private applicationDocumentService: ApplicationDocumentService
   ) {}
 
@@ -67,14 +68,15 @@ export class ReviewSubmitComponent implements OnInit, OnDestroy {
       }
     });
 
+    this.$applicationDocuments.pipe(takeUntil(this.$destroy)).subscribe((documents) => {
+      this.resolutionDocument = documents.filter((document) => document.type === DOCUMENT.RESOLUTION_DOCUMENT);
+      this.staffReport = documents.filter((document) => document.type === DOCUMENT.STAFF_REPORT);
+      this.otherAttachments = documents.filter((document) => document.type === DOCUMENT.REVIEW_OTHER);
+    });
+
     this.$application.pipe(takeUntil(this.$destroy)).subscribe((application) => {
       if (application) {
         this.fileId = application.fileNumber;
-        this.resolutionDocument = application.documents.filter(
-          (document) => document.type === DOCUMENT.RESOLUTION_DOCUMENT
-        );
-        this.staffReport = application.documents.filter((document) => document.type === DOCUMENT.STAFF_REPORT);
-        this.otherAttachments = application.documents.filter((document) => document.type === DOCUMENT.REVIEW_OTHER);
       }
     });
   }
@@ -156,7 +158,7 @@ export class ReviewSubmitComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  private validateContactInfo(review: ApplicationReviewDto) {
+  private validateContactInfo(review: ApplicationSubmissionReviewDto) {
     return (
       review.localGovernmentFileNumber &&
       review.firstName &&
@@ -168,7 +170,7 @@ export class ReviewSubmitComponent implements OnInit, OnDestroy {
     );
   }
 
-  private validateOCP(review: ApplicationReviewDto) {
+  private validateOCP(review: ApplicationSubmissionReviewDto) {
     if (review.isOCPDesignation) {
       return review.isOCPDesignation
         ? review.OCPBylawName && review.OCPDesignation && review.OCPConsistent !== null
@@ -177,7 +179,7 @@ export class ReviewSubmitComponent implements OnInit, OnDestroy {
     return review.isOCPDesignation !== null;
   }
 
-  private validateZoning(review: ApplicationReviewDto) {
+  private validateZoning(review: ApplicationSubmissionReviewDto) {
     if (review.isSubjectToZoning) {
       return (
         review.isZoningConsistent !== null &&
@@ -189,14 +191,14 @@ export class ReviewSubmitComponent implements OnInit, OnDestroy {
     return review.isSubjectToZoning !== null;
   }
 
-  private validateAuthorization(review: ApplicationReviewDto) {
+  private validateAuthorization(review: ApplicationSubmissionReviewDto) {
     if (review.isSubjectToZoning === true || review.isOCPDesignation === true) {
       return review.isAuthorized !== null;
     }
     return true;
   }
 
-  private validateAttachments(review: ApplicationReviewDto) {
+  private validateAttachments(review: ApplicationSubmissionReviewDto) {
     if (review.isSubjectToZoning === true || review.isOCPDesignation == true) {
       if (review.isAuthorized === true) {
         return this.resolutionDocument.length > 0 && this.staffReport.length > 0;

@@ -3,10 +3,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
 import { ApplicationDocumentDto, DOCUMENT } from '../../services/application-document/application-document.dto';
 import { ApplicationDocumentService } from '../../services/application-document/application-document.service';
-import { ApplicationReviewDto } from '../../services/application-review/application-review.dto';
-import { ApplicationReviewService } from '../../services/application-review/application-review.service';
-import { APPLICATION_STATUS, ApplicationDetailedDto } from '../../services/application/application.dto';
-import { ApplicationService } from '../../services/application/application.service';
+import { ApplicationSubmissionReviewDto } from '../../services/application-submission-review/application-submission-review.dto';
+import { ApplicationSubmissionReviewService } from '../../services/application-submission-review/application-submission-review.service';
+import {
+  APPLICATION_STATUS,
+  ApplicationSubmissionDetailedDto,
+} from '../../services/application-submission/application-submission.dto';
+import { ApplicationSubmissionService } from '../../services/application-submission/application-submission.service';
 import { ConfirmationDialogService } from '../../shared/confirmation-dialog/confirmation-dialog.service';
 import { MOBILE_BREAKPOINT } from '../../shared/utils/breakpoints';
 
@@ -22,9 +25,10 @@ enum MOBILE_STEP {
   styleUrls: ['./view-application.component.scss'],
 })
 export class ViewApplicationComponent implements OnInit, OnDestroy {
-  application: ApplicationDetailedDto | undefined;
-  $application = new BehaviorSubject<ApplicationDetailedDto | undefined>(undefined);
-  applicationReview: ApplicationReviewDto | undefined;
+  application: ApplicationSubmissionDetailedDto | undefined;
+  $application = new BehaviorSubject<ApplicationSubmissionDetailedDto | undefined>(undefined);
+  $applicationDocuments = new BehaviorSubject<ApplicationDocumentDto[]>([]);
+  applicationReview: ApplicationSubmissionReviewDto | undefined;
 
   $destroy = new Subject<void>();
 
@@ -43,8 +47,8 @@ export class ViewApplicationComponent implements OnInit, OnDestroy {
   }
 
   constructor(
-    private applicationService: ApplicationService,
-    private applicationReviewService: ApplicationReviewService,
+    private applicationService: ApplicationSubmissionService,
+    private applicationReviewService: ApplicationSubmissionReviewService,
     private confirmationDialogService: ConfirmationDialogService,
     private applicationDocumentService: ApplicationDocumentService,
     private route: ActivatedRoute,
@@ -74,14 +78,14 @@ export class ViewApplicationComponent implements OnInit, OnDestroy {
   async loadApplication(fileId: string) {
     this.application = await this.applicationService.getByFileId(fileId);
     this.$application.next(this.application);
+    this.loadApplicationDocuments(fileId);
 
-    if (this.application && this.application.status.code === APPLICATION_STATUS.SUBMITTED_TO_ALC) {
+    if (
+      this.application &&
+      this.application.status.code === APPLICATION_STATUS.SUBMITTED_TO_ALC &&
+      this.application.typeCode !== 'TURP'
+    ) {
       this.loadApplicationReview(fileId);
-      this.staffReport = this.application.documents.filter((document) => document.type === DOCUMENT.STAFF_REPORT);
-      this.resolutionDocument = this.application.documents.filter(
-        (document) => document.type === DOCUMENT.RESOLUTION_DOCUMENT
-      );
-      this.otherAttachments = this.application.documents.filter((document) => document.type === DOCUMENT.REVIEW_OTHER);
     }
   }
 
@@ -127,5 +131,15 @@ export class ViewApplicationComponent implements OnInit, OnDestroy {
 
   onNavigateHome() {
     this.router.navigateByUrl(`home`);
+  }
+
+  private async loadApplicationDocuments(fileId: string) {
+    const documents = await this.applicationDocumentService.getByFileId(fileId);
+    if (documents) {
+      this.$applicationDocuments.next(documents);
+      this.staffReport = documents.filter((document) => document.type === DOCUMENT.STAFF_REPORT);
+      this.resolutionDocument = documents.filter((document) => document.type === DOCUMENT.RESOLUTION_DOCUMENT);
+      this.otherAttachments = documents.filter((document) => document.type === DOCUMENT.REVIEW_OTHER);
+    }
   }
 }

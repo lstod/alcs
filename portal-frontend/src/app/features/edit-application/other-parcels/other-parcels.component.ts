@@ -15,10 +15,11 @@ import {
   PARCEL_TYPE,
 } from '../../../services/application-parcel/application-parcel.dto';
 import { ApplicationParcelService } from '../../../services/application-parcel/application-parcel.service';
-import { ApplicationDetailedDto } from '../../../services/application/application.dto';
-import { ApplicationService } from '../../../services/application/application.service';
+import { ApplicationSubmissionDetailedDto } from '../../../services/application-submission/application-submission.dto';
+import { ApplicationSubmissionService } from '../../../services/application-submission/application-submission.service';
 import { ToastService } from '../../../services/toast/toast.service';
 import { formatBooleanToString } from '../../../shared/utils/boolean-helper';
+import { getLetterCombinations } from '../../../shared/utils/number-to-letter-helper';
 import { parseStringToBoolean } from '../../../shared/utils/string-helper';
 import { EditApplicationSteps } from '../edit-application.component';
 import { DeleteParcelDialogComponent } from '../parcel-details/delete-parcel/delete-parcel-dialog.component';
@@ -33,7 +34,7 @@ const PLACE_HOLDER_UUID_FOR_INITIAL_PARCEL = 'placeHolderUuidForInitialParcel';
   styleUrls: ['./other-parcels.component.scss'],
 })
 export class OtherParcelsComponent implements OnInit, OnDestroy {
-  @Input() $application!: BehaviorSubject<ApplicationDetailedDto | undefined>;
+  @Input() $application!: BehaviorSubject<ApplicationSubmissionDetailedDto | undefined>;
   @Input() showErrors = false;
   @Output() navigateToStep = new EventEmitter<number>();
   currentStep = EditApplicationSteps.OtherParcel;
@@ -51,14 +52,15 @@ export class OtherParcelsComponent implements OnInit, OnDestroy {
 
   otherParcels: ApplicationParcelDto[] = [];
   $owners = new BehaviorSubject<ApplicationOwnerDto[]>([]);
-  application?: ApplicationDetailedDto;
+  application?: ApplicationSubmissionDetailedDto;
   formDisabled = true;
   newParcelAdded = false;
   hasCrownLandParcels = false;
+  parcelEntryChanged = false;
 
   constructor(
     private applicationParcelService: ApplicationParcelService,
-    private applicationService: ApplicationService,
+    private applicationService: ApplicationSubmissionService,
     private toastService: ToastService,
     private dialog: MatDialog,
     private router: Router
@@ -100,14 +102,21 @@ export class OtherParcelsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    parcel.pid = formData.pid;
-    parcel.pin = formData.pin;
-    parcel.legalDescription = formData.legalDescription;
-    parcel.mapAreaHectares = formData.mapArea;
-    parcel.ownershipTypeCode = formData.parcelType;
-    parcel.isFarm = parseStringToBoolean(formData.isFarm);
-    parcel.purchasedDate = formData.purchaseDate?.getTime();
+    this.parcelEntryChanged = true;
+
+    parcel.pid = formData.pid !== undefined ? formData.pid : parcel.pid;
+    parcel.pin = formData.pid !== undefined ? formData.pin : parcel.pin;
+    parcel.legalDescription =
+      formData.legalDescription !== undefined ? formData.legalDescription : parcel.legalDescription;
+
+    parcel.mapAreaHectares = formData.mapArea !== undefined ? formData.mapArea : parcel.mapAreaHectares;
+    parcel.ownershipTypeCode = formData.parcelType !== undefined ? formData.parcelType : parcel.ownershipTypeCode;
+    parcel.isFarm = formData.isFarm !== undefined ? parseStringToBoolean(formData.isFarm) : parcel.isFarm;
+    parcel.purchasedDate =
+      formData.purchaseDate !== undefined ? formData.purchaseDate?.getTime() : parcel.purchasedDate;
     parcel.isConfirmedByApplicant = formData.isConfirmedByApplicant || false;
+    parcel.crownLandOwnerType =
+      formData.crownLandOwnerType !== undefined ? formData.crownLandOwnerType : parcel.crownLandOwnerType;
     if (formData.owners) {
       parcel.owners = formData.owners;
     }
@@ -237,7 +246,10 @@ export class OtherParcelsComponent implements OnInit, OnDestroy {
   async onHasOtherParcelsInCommunityChange($event: MatButtonToggleChange) {
     const parsedHasParcels = parseStringToBoolean($event.value);
 
-    if (parsedHasParcels === false) {
+    if (
+      parsedHasParcels === false &&
+      (this.otherParcels.some((e) => e.uuid !== PLACE_HOLDER_UUID_FOR_INITIAL_PARCEL) || this.parcelEntryChanged)
+    ) {
       this.dialog
         .open(OtherParcelConfirmationDialogComponent, {
           panelClass: 'no-padding',
@@ -251,6 +263,7 @@ export class OtherParcelsComponent implements OnInit, OnDestroy {
             await this.setHasOtherParcelsInCommunity(false);
             await this.saveProgress();
             await this.reloadApplication();
+            this.parcelEntryChanged = false;
           } else {
             this.hasOtherParcelsInCommunity.patchValue('true');
             this.formDisabled = false;
@@ -283,5 +296,9 @@ export class OtherParcelsComponent implements OnInit, OnDestroy {
 
   onNavigateToStep(step: number) {
     this.navigateToStep.emit(step);
+  }
+
+  getLetterIndex(num: number) {
+    return getLetterCombinations(num);
   }
 }

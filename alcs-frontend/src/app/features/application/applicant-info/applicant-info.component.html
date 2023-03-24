@@ -1,15 +1,9 @@
 <div class="applicant-info">
-  <h3>Applicant Info</h3>
-  <div>
-    <div class="subheading1">Applicant</div>
-    <div>{{ applicant }}</div>
-  </div>
-
-  <section>
-    <app-document
+  <div *ngIf="application && submission">
+    <app-application-details
+      [submittedApplication]="submission"
       [fileNumber]="fileNumber"
-      [documentType]="DOCUMENT_TYPE.CERTIFICATE_OF_TITLE"
-      title="Applicant Documents"
-    ></app-document>
-  </section>
+      [applicationType]="application.type.code"
+    ></app-application-details>
+  </div>
 </div>

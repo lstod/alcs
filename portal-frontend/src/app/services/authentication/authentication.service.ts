@@ -52,7 +52,7 @@ export class AuthenticationService {
   }
 
   async getLoginUrl() {
-    return firstValueFrom(this.http.get<{ loginUrl: string }>(`${environment.apiUrl}/authorize/login`));
+    return firstValueFrom(this.http.get<{ loginUrl: string }>(`${environment.authUrl}/authorize/login`));
   }
 
   async getToken() {
@@ -89,6 +89,8 @@ export class AuthenticationService {
       const valid = await this.isTokenValid(existingToken);
       if (valid) {
         await this.setTokens(existingToken, refreshToken);
+        //Refresh Tokens Immediately to reset the refresh tokens validity to 5 minutes
+        await this.refreshTokens();
       }
     }
   }
@@ -104,7 +106,7 @@ export class AuthenticationService {
   private async isTokenValid(token: string) {
     try {
       await firstValueFrom(
-        this.http.get(`${environment.apiUrl}/token`, {
+        this.http.get(`${environment.authUrl}/token`, {
           responseType: 'text',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -114,7 +116,6 @@ export class AuthenticationService {
       return true;
     } catch (e) {
       if (e instanceof HttpErrorResponse && e.status === 401) {
-        //Take user to login page
         return false;
       }
       throw e;
@@ -126,13 +127,13 @@ export class AuthenticationService {
       this.http.get<{
         refresh_token: string;
         token: string;
-      }>(`${environment.apiUrl}/authorize/refresh?r=${refreshToken}`)
+      }>(`${environment.authUrl}/authorize/refresh?r=${refreshToken}`)
     );
     return res;
   }
 
   private async getLogoutUrl() {
-    return firstValueFrom(this.http.get<{ url: string }>(`${environment.apiUrl}/logout`));
+    return firstValueFrom(this.http.get<{ url: string }>(`${environment.authUrl}/logout/portal`));
   }
 
   getCurrentUser = () => this.currentUser;

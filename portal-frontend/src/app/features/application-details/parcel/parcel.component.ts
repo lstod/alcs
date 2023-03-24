@@ -10,9 +10,10 @@ import {
   PARCEL_TYPE,
 } from '../../../services/application-parcel/application-parcel.dto';
 import { ApplicationParcelService } from '../../../services/application-parcel/application-parcel.service';
-import { ApplicationDetailedDto } from '../../../services/application/application.dto';
+import { ApplicationSubmissionDetailedDto } from '../../../services/application-submission/application-submission.dto';
 import { BaseCodeDto } from '../../../shared/dto/base.dto';
 import { formatBooleanToYesNoString } from '../../../shared/utils/boolean-helper';
+import { getLetterCombinations } from '../../../shared/utils/number-to-letter-helper';
 
 export class ApplicationParcelBasicValidation {
   // indicates general validity check state, including owner related information
@@ -49,7 +50,7 @@ export class ParcelComponent {
   // TODO instead of providing application load parcel as input or in addition to application
   $destroy = new Subject<void>();
 
-  @Input() $application!: BehaviorSubject<ApplicationDetailedDto | undefined>;
+  @Input() $application!: BehaviorSubject<ApplicationSubmissionDetailedDto | undefined>;
   @Input() showErrors = true;
   @Input() showEdit = true;
   @Input() parcelType: PARCEL_TYPE = PARCEL_TYPE.APPLICATION;
@@ -61,7 +62,7 @@ export class ParcelComponent {
 
   fileId: string = '';
   parcels: ApplicationParcelExtended[] = [];
-  application!: ApplicationDetailedDto;
+  application!: ApplicationSubmissionDetailedDto;
 
   constructor(
     private applicationParcelService: ApplicationParcelService,
@@ -188,5 +189,9 @@ export class ParcelComponent {
 
   onEditParcelClick(uuid: string) {
     this.router.navigateByUrl(`application/${this.fileId}/edit/${this.navigationStepInd}?parcelUuid=${uuid}&errors=t`);
+  }
+
+  getLetterIndex(num: number) {
+    return getLetterCombinations(num);
   }
 }

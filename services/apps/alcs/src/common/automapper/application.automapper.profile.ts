@@ -1,32 +1,33 @@
 import { createMap, forMember, mapFrom, Mapper } from '@automapper/core';
 import { AutomapperProfile, InjectMapper } from '@automapper/nestjs';
 import { Injectable } from '@nestjs/common';
-import { ApplicationReviewGrpc } from '../../application-grpc/alcs-application.message.interface';
-import { ApplicationLocalGovernmentDto } from '../../application/application-code/application-local-government/application-local-government.dto';
-import { ApplicationLocalGovernment } from '../../application/application-code/application-local-government/application-local-government.entity';
-import { ApplicationDocumentDto } from '../../application/application-document/application-document.dto';
-import { ApplicationDocument } from '../../application/application-document/application-document.entity';
+
+import { ApplicationLocalGovernmentDto } from '../../alcs/application/application-code/application-local-government/application-local-government.dto';
+import { ApplicationLocalGovernment } from '../../alcs/application/application-code/application-local-government/application-local-government.entity';
+import { ApplicationDocumentDto } from '../../alcs/application/application-document/application-document.dto';
+import { ApplicationDocument } from '../../alcs/application/application-document/application-document.entity';
 import {
   ApplicationMeetingDto,
   CreateApplicationMeetingDto,
-} from '../../application/application-meeting/application-meeting.dto';
-import { ApplicationMeeting } from '../../application/application-meeting/application-meeting.entity';
-import { ApplicationPaused } from '../../application/application-paused.entity';
+} from '../../alcs/application/application-meeting/application-meeting.dto';
+import { ApplicationMeeting } from '../../alcs/application/application-meeting/application-meeting.entity';
+import { ApplicationPaused } from '../../alcs/application/application-paused.entity';
 import {
   ApplicationDto,
-  ApplicationReviewDto,
-} from '../../application/application.dto';
-import { Application } from '../../application/application.entity';
-import { CardDto } from '../../card/card.dto';
-import { Card } from '../../card/card.entity';
-import { ApplicationMeetingTypeDto } from '../../code/application-code/application-meeting-type/application-meeting-type.dto';
-import { ApplicationMeetingType } from '../../code/application-code/application-meeting-type/application-meeting-type.entity';
-import { ApplicationRegionDto } from '../../code/application-code/application-region/application-region.dto';
-import { ApplicationRegion } from '../../code/application-code/application-region/application-region.entity';
-import { ApplicationTypeDto } from '../../code/application-code/application-type/application-type.dto';
-import { ApplicationType } from '../../code/application-code/application-type/application-type.entity';
-import { ApplicationDecisionMeetingDto } from '../../decision/application-decision-meeting/application-decision-meeting.dto';
-import { ApplicationDecisionMeeting } from '../../decision/application-decision-meeting/application-decision-meeting.entity';
+  SubmittedApplicationDto,
+} from '../../alcs/application/application.dto';
+import { Application } from '../../alcs/application/application.entity';
+import { CardDto } from '../../alcs/card/card.dto';
+import { Card } from '../../alcs/card/card.entity';
+import { ApplicationMeetingTypeDto } from '../../alcs/code/application-code/application-meeting-type/application-meeting-type.dto';
+import { ApplicationMeetingType } from '../../alcs/code/application-code/application-meeting-type/application-meeting-type.entity';
+import { ApplicationRegionDto } from '../../alcs/code/application-code/application-region/application-region.dto';
+import { ApplicationRegion } from '../../alcs/code/application-code/application-region/application-region.entity';
+import { ApplicationTypeDto } from '../../alcs/code/application-code/application-type/application-type.dto';
+import { ApplicationType } from '../../alcs/code/application-code/application-type/application-type.entity';
+import { ApplicationDecisionMeetingDto } from '../../alcs/decision/application-decision-meeting/application-decision-meeting.dto';
+import { ApplicationDecisionMeeting } from '../../alcs/decision/application-decision-meeting/application-decision-meeting.entity';
+import { ApplicationSubmission } from '../../portal/application-submission/application-submission.entity';
 
 @Injectable()
 export class ApplicationProfile extends AutomapperProfile {
@@ -45,8 +46,6 @@ export class ApplicationProfile extends AutomapperProfile {
         ApplicationLocalGovernment,
         ApplicationLocalGovernmentDto,
       );
-
-      createMap(mapper, ApplicationReviewGrpc, ApplicationReviewDto);
 
       createMap(
         mapper,
@@ -111,12 +110,20 @@ export class ApplicationProfile extends AutomapperProfile {
           mapFrom((ad) => ad.document.fileName),
         ),
         forMember(
+          (a) => a.fileSize,
+          mapFrom((ad) => ad.document.fileSize),
+        ),
+        forMember(
           (a) => a.uploadedBy,
           mapFrom((ad) => ad.document.uploadedBy?.name),
         ),
         forMember(
           (a) => a.uploadedAt,
           mapFrom((ad) => ad.document.uploadedAt.getTime()),
+        ),
+        forMember(
+          (a) => a.documentUuid,
+          mapFrom((ad) => ad.document.uuid),
         ),
       );
 
@@ -171,6 +178,26 @@ export class ApplicationProfile extends AutomapperProfile {
       );
 
       createMap(mapper, ApplicationDto, Card);
+
+      createMap(
+        mapper,
+        ApplicationSubmission,
+        SubmittedApplicationDto,
+        forMember(
+          (a) => a.documents,
+          mapFrom((ad) => {
+            if (ad.application.documents) {
+              return this.mapper.mapArray(
+                ad.application.documents,
+                ApplicationDocument,
+                ApplicationDocumentDto,
+              );
+            } else {
+              return [];
+            }
+          }),
+        ),
+      );
     };
   }
 

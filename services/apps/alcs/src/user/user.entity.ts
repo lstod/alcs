@@ -1,7 +1,7 @@
 import { AutoMap } from '@automapper/classes';
 import { Column, Entity, Index, OneToMany } from 'typeorm';
-import { Card } from '../card/card.entity';
-import { CommentMention } from '../comment/mention/comment-mention.entity';
+import { Card } from '../alcs/card/card.entity';
+import { CommentMention } from '../alcs/comment/mention/comment-mention.entity';
 import { Base } from '../common/entities/base.entity';
 import { Document } from '../document/document.entity';
 
@@ -11,6 +11,13 @@ export class UserSettings {
 
 @Entity()
 export class User extends Base {
+  constructor(data?: Partial<User>) {
+    super();
+    if (data) {
+      Object.assign(this, data);
+    }
+  }
+
   @AutoMap()
   @Column()
   email: string;
@@ -56,6 +63,9 @@ export class User extends Base {
   @AutoMap()
   @Column({ nullable: true })
   bceidUserName: string;
+
+  @Column({ nullable: true })
+  bceidBusinessGuid: string;
 
   @AutoMap()
   @Column({ default: [], array: true, type: 'text' })

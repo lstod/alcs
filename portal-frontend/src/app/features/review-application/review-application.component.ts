@@ -3,9 +3,11 @@ import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BehaviorSubject, Observable, Subject, combineLatest, of, takeUntil } from 'rxjs';
-import { ApplicationReviewService } from '../../services/application-review/application-review.service';
-import { ApplicationDto } from '../../services/application/application.dto';
-import { ApplicationService } from '../../services/application/application.service';
+import { ApplicationDocumentDto } from '../../services/application-document/application-document.dto';
+import { ApplicationDocumentService } from '../../services/application-document/application-document.service';
+import { ApplicationSubmissionReviewService } from '../../services/application-submission-review/application-submission-review.service';
+import { ApplicationSubmissionDto } from '../../services/application-submission/application-submission.dto';
+import { ApplicationSubmissionService } from '../../services/application-submission/application-submission.service';
 import { ToastService } from '../../services/toast/toast.service';
 import { CustomStepperComponent } from '../../shared/custom-stepper/custom-stepper.component';
 import { ReturnApplicationDialogComponent } from './return-application-dialog/return-application-dialog.component';
@@ -42,8 +44,9 @@ export class NavigateToStep {
 })
 export class ReviewApplicationComponent implements OnInit, OnDestroy {
   $destroy = new Subject<void>();
-  application: ApplicationDto | undefined;
-  $application = new BehaviorSubject<ApplicationDto | undefined>(undefined);
+  application: ApplicationSubmissionDto | undefined;
+  $application = new BehaviorSubject<ApplicationSubmissionDto | undefined>(undefined);
+  $applicationDocuments = new BehaviorSubject<ApplicationDocumentDto[]>([]);
   fileId = '';
 
   isFirstNationGovernment = true;
@@ -60,8 +63,9 @@ export class ReviewApplicationComponent implements OnInit, OnDestroy {
   @ViewChild(ReviewResolutionComponent) reviewResolutionComponent!: ReviewResolutionComponent;
 
   constructor(
-    private applicationService: ApplicationService,
-    private applicationReviewService: ApplicationReviewService,
+    private applicationService: ApplicationSubmissionService,
+    private applicationReviewService: ApplicationSubmissionReviewService,
+    private applicationDocumentService: ApplicationDocumentService,
     private router: Router,
     private dialog: MatDialog,
     private toastService: ToastService,
@@ -83,6 +87,7 @@ export class ReviewApplicationComponent implements OnInit, OnDestroy {
           }
 
           this.loadApplication(fileId);
+          this.loadApplicationDocuments(fileId);
           this.loadApplicationReview(fileId).then(() => {
             if (stepInd) {
               // setTimeout is required for stepper to be initialized
@@ -193,5 +198,12 @@ export class ReviewApplicationComponent implements OnInit, OnDestroy {
   async onStepChange($event: StepperSelectionEvent) {
     const el = document.getElementById(`stepWrapper_${$event.selectedIndex}`);
     el?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  private async loadApplicationDocuments(fileId: any) {
+    const documents = await this.applicationDocumentService.getByFileId(fileId);
+    if (documents) {
+      this.$applicationDocuments.next(documents);
+    }
   }
 }

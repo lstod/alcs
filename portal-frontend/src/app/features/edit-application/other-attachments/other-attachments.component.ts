@@ -8,8 +8,8 @@ import {
   DOCUMENT,
 } from '../../../services/application-document/application-document.dto';
 import { ApplicationDocumentService } from '../../../services/application-document/application-document.service';
-import { ApplicationDetailedDto } from '../../../services/application/application.dto';
-import { ApplicationService } from '../../../services/application/application.service';
+import { ApplicationSubmissionDetailedDto } from '../../../services/application-submission/application-submission.dto';
+import { ApplicationSubmissionService } from '../../../services/application-submission/application-submission.service';
 import { FileHandle } from '../../../shared/file-drag-drop/drag-drop.directive';
 import { EditApplicationSteps } from '../edit-application.component';
 
@@ -19,7 +19,8 @@ import { EditApplicationSteps } from '../edit-application.component';
   styleUrls: ['./other-attachments.component.scss'],
 })
 export class OtherAttachmentsComponent implements OnInit, OnDestroy {
-  @Input() $application!: BehaviorSubject<ApplicationDetailedDto | undefined>;
+  @Input() $application!: BehaviorSubject<ApplicationSubmissionDetailedDto | undefined>;
+  @Input() $applicationDocuments!: BehaviorSubject<ApplicationDocumentDto[]>;
   @Input() showErrors = false;
   @Output() navigateToStep = new EventEmitter<number>();
   $destroy = new Subject<void>();
@@ -36,7 +37,7 @@ export class OtherAttachmentsComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
-    private applicationService: ApplicationService,
+    private applicationService: ApplicationSubmissionService,
     private applicationDocumentService: ApplicationDocumentService
   ) {}
 
@@ -44,20 +45,23 @@ export class OtherAttachmentsComponent implements OnInit, OnDestroy {
     this.$application.pipe(takeUntil(this.$destroy)).subscribe((application) => {
       if (application) {
         this.fileId = application.fileNumber;
-        this.otherFiles = application.documents
-          .filter((file) => (file.type ? this.selectableTypes.includes(file.type) : true))
-          .sort((a, b) => {
-            return a.uploadedAt - b.uploadedAt;
-          });
-        const newForm = new FormGroup({});
-        for (const file of this.otherFiles) {
-          newForm.addControl(`${file.uuid}-type`, new FormControl(file.type, [Validators.required]));
-          newForm.addControl(`${file.uuid}-description`, new FormControl(file.description, [Validators.required]));
-        }
-        this.form = newForm;
-        if (this.showErrors) {
-          this.form.markAllAsTouched();
-        }
+      }
+    });
+
+    this.$applicationDocuments.pipe(takeUntil(this.$destroy)).subscribe((documents) => {
+      this.otherFiles = documents
+        .filter((file) => (file.type ? this.selectableTypes.includes(file.type) : true))
+        .sort((a, b) => {
+          return a.uploadedAt - b.uploadedAt;
+        });
+      const newForm = new FormGroup({});
+      for (const file of this.otherFiles) {
+        newForm.addControl(`${file.uuid}-type`, new FormControl(file.type, [Validators.required]));
+        newForm.addControl(`${file.uuid}-description`, new FormControl(file.description, [Validators.required]));
+      }
+      this.form = newForm;
+      if (this.showErrors) {
+        this.form.markAllAsTouched();
       }
     });
   }
@@ -72,8 +76,10 @@ export class OtherAttachmentsComponent implements OnInit, OnDestroy {
     if (this.fileId) {
       await this.onSave();
       await this.applicationDocumentService.attachExternalFile(this.fileId, file.file, null);
-      const updatedApp = await this.applicationService.getByFileId(this.fileId);
-      this.$application.next(updatedApp);
+      const documents = await this.applicationDocumentService.getByFileId(this.fileId);
+      if (documents) {
+        this.$applicationDocuments.next(documents);
+      }
     }
   }
 
@@ -81,8 +87,10 @@ export class OtherAttachmentsComponent implements OnInit, OnDestroy {
     if (this.fileId) {
       await this.onSave();
       await this.applicationDocumentService.deleteExternalFile(uuid);
-      const updatedApp = await this.applicationService.getByFileId(this.fileId);
-      this.$application.next(updatedApp);
+      const documents = await this.applicationDocumentService.getByFileId(this.fileId);
+      if (documents) {
+        this.$applicationDocuments.next(documents);
+      }
     }
   }
 
